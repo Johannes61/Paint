@@ -4,18 +4,18 @@
   --line: #eaeaea;
   --shadow: 0 10px 30px rgba(0,0,0,.06);
 
-  /* Pixel sizing (keep size constant) */
+  /* Pixel sizing (fixed) */
   --pixel-size: 12px;
 
-  /* Board dimensions (very large so it covers screen area) */
-  --cols: 200;  /* width in cells */
-  --rows: 200;  /* height in cells */
+  /* Big grid so it covers the viewport visually */
+  --cols: 200;
+  --rows: 200;
 
-  /* Tool dock */
-  --dock-gap: 18px;      /* space from screen edge */
-  --dock-radius: 16px;   /* rounded pill radius */
+  /* Tool dock (floating pill) */
+  --dock-gap: 18px;       /* space from edge */
+  --dock-radius: 16px;    /* rounded */
   --dock-bg: #ffffff;
-  --dock-border: #ebebeb;
+  --dock-border: #e8e8e8;
 }
 
 * { box-sizing: border-box; }
@@ -27,51 +27,54 @@ html, body {
   color: #111;
 }
 
-/* Viewport is the full screen */
 #viewport {
   position: relative;
   width: 100vw;
   height: 100vh;
-  overflow: hidden; /* ensure the grid visually “covers” the screen */
+  overflow: hidden;             /* keep grid covering screen */
 }
 
-/* The grid is big enough to fill the viewport at fixed pixel size */
+/* Grid fills viewport area at fixed pixel size */
 .board {
   position: absolute;
   inset: 0;
   display: grid;
   grid-template-columns: repeat(var(--cols), var(--pixel-size));
   grid-template-rows: repeat(var(--rows), var(--pixel-size));
-  /* center the grid behind if it's bigger than viewport */
-  margin: 0 auto;
   border-top: 1px solid var(--line);
   border-left: 1px solid var(--line);
-  /* no scaling — pixels remain the same size */
+  /* no scaling; each pixel is a real cell */
 }
 
-/* Each pixel cell */
+/* Each pixel */
 .pixel {
   width: var(--pixel-size);
   height: var(--pixel-size);
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  background: #ffffff; /* empty = white */
+  background: #ffffff; /* empty */
   user-select: none;
 }
 
-/* Floating side GUI (icons only) */
+/* Floating tool dock — icons only */
 .tool-dock {
   position: absolute;
   top: 50%;
-  right: 0;
-  transform: translate(calc(20% + var(--dock-gap) * -1), -50%); /* slight “chop” off-screen + gap */
+  right: var(--dock-gap);
+  transform: translateY(-50%);
+  display: grid;
+  gap: 10px;
   background: var(--dock-bg);
   border: 1px solid var(--dock-border);
   border-radius: var(--dock-radius);
-  box-shadow: var(--shadow);
   padding: 10px;
-  display: grid;
-  gap: 8px;
+  box-shadow: var(--shadow);
+  z-index: 10;
+
+  /* subtle chopped look */
+  clip-path: inset(0 round var(--dock-radius));
+  /* little fake “bite” at the outer edge */
+  mask-image: radial-gradient(16px 16px at calc(100% + 6px) 50%, transparent 14px, black 16px);
 }
 
 .icon-btn {
@@ -109,42 +112,24 @@ html, body {
   box-shadow: var(--shadow);
 }
 .modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--line);
 }
 .x-btn {
-  background: transparent;
-  border: 0;
-  font-size: 28px;
-  line-height: 1;
-  cursor: pointer;
+  background: transparent; border: 0; font-size: 28px; line-height: 1; cursor: pointer;
 }
 .modal-body {
-  padding: 16px;
-  display: grid;
-  gap: 12px;
+  padding: 16px; display: grid; gap: 12px;
 }
-#color-picker {
-  width: 100%;
-  height: 44px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-}
+#color-picker { width: 100%; height: 44px; border-radius: 8px; border: 1px solid var(--line); }
 .primary {
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: #fff;
-  cursor: pointer;
-  font-weight: 600;
-  box-shadow: var(--shadow);
+  height: 40px; border-radius: 8px; border: 1px solid var(--line);
+  background: #fff; cursor: pointer; font-weight: 600; box-shadow: var(--shadow);
 }
 .current-row { display: flex; align-items: center; gap: 10px; }
-.swatch {
-  width: 32px; height: 32px; border-radius: 6px;
-  border: 1px solid var(--line);
-  box-shadow: 0 2px 6px rgba(0,0,0,.05);
+.swatch { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--line); box-shadow: 0 2px 6px rgba(0,0,0,.05); }
+
+/* Safety: ensure dock stays vertical on tiny screens */
+@media (max-height: 420px) {
+  .tool-dock { top: auto; bottom: var(--dock-gap); transform: none; }
 }
