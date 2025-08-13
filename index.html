@@ -5,23 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Live Pixel Board</title>
   <link rel="stylesheet" href="style.css" />
+  <!-- GUN (peer-to-peer realtime) -->
   <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
 </head>
 <body>
   <main id="viewport">
+    <!-- The pixel board fills the screen; large grid behind -->
     <div id="board" class="board" aria-label="Pixel board" role="grid"></div>
+
+    <!-- Floating side GUI (icons only) -->
     <aside class="tool-dock" aria-label="Tools">
       <button id="tool-pencil" class="icon-btn active" title="Pencil" aria-label="Pencil">
+        <!-- pencil -->
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
           <path d="M3 17.25V21h3.75L19.81 7.94l-3.75-3.75L3 17.25zm14.85-9.9c.29-.29.29-.77 0-1.06l-2.14-2.14a.75.75 0 00-1.06 0l-1.83 1.83 3.75 3.75 1.28-1.38z"/>
         </svg>
       </button>
       <button id="tool-eraser" class="icon-btn" title="Eraser" aria-label="Eraser">
+        <!-- eraser -->
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
           <path d="M16.24 3.56a2 2 0 012.83 0l1.37 1.37a2 2 0 010 2.83l-9.9 9.9a2 2 0 01-1.41.59H6.83a2 2 0 01-1.41-.59L3.56 15.9a2 2 0 010-2.83l9.9-9.5h2.78zM5.97 14.49l2.12 2.12h1.3l9.2-9.2-2.12-2.12-10.5 9.2z"/>
         </svg>
       </button>
       <button id="tool-color" class="icon-btn" title="Color" aria-label="Color">
+        <!-- color/palette -->
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
           <path d="M12 3a9 9 0 00-9 9 9 9 0 0010.5 8.9 2.5 2.5 0 002.5-2.5c0-.8-.4-1.5-1-2a2 2 0 011.3-3.5H17a5 5 0 000-10h-5zM7 12a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3-4.5A1.5 1.5 0 1111.5 6 1.5 1.5 0 0110 7.5zm7 1A1.5 1.5 0 1118.5 7 1.5 1.5 0 0117 8.5z"/>
         </svg>
@@ -29,6 +36,7 @@
     </aside>
   </main>
 
+  <!-- Color HUD (modal) -->
   <div id="color-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="color-title">
     <div class="modal-content">
       <div class="modal-header">

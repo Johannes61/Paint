@@ -1,8 +1,12 @@
-const COLS = 200;
-const ROWS = 200;
-const PIXEL_EMPTY = '#ffffff';
-const ROOM_KEY = 'lb_pixelboard_room_v2';
+/* ========== SETTINGS ========== */
+/* Keep pixel size constant via CSS. Make board large so it covers screen. */
+const COLS = 200;   // width in cells
+const ROWS = 200;   // height in cells
+const PIXEL_EMPTY = '#ffffff'; // white background
+const ROOM_KEY = 'lb_pixelboard_room_v2'; // namespace in GUN
+/* ============================= */
 
+/* Random color every page load (requirement) */
 function randomColor() {
   const h = Math.floor(Math.random() * 360);
   const s = 70 + Math.floor(Math.random() * 20);
@@ -10,9 +14,10 @@ function randomColor() {
   return `hsl(${h} ${s}% ${l}%)`;
 }
 let currentColor = randomColor();
-let currentTool = 'pencil';
+let currentTool = 'pencil'; // 'pencil' | 'eraser'
 let isDrawing = false;
 
+/* Elements */
 const boardEl = document.getElementById('board');
 const pencilBtn = document.getElementById('tool-pencil');
 const eraserBtn = document.getElementById('tool-eraser');
@@ -23,20 +28,25 @@ const randomColorBtn = document.getElementById('random-color');
 const currentColorSwatch = document.getElementById('current-color');
 const closeModalBtn = document.getElementById('close-modal');
 
+/* Reflect initial color in HUD */
 currentColorSwatch.style.background = currentColor;
 
+/* Sync CSS grid size with JS constants */
 document.documentElement.style.setProperty('--cols', COLS);
 document.documentElement.style.setProperty('--rows', ROWS);
 
+/* GUN p2p realtime (no backend needed on GitHub Pages) */
 const gun = Gun({
   peers: [
+    // public community relays (best-effort). Add more for resilience or host your own.
     'https://gun-manhattan.herokuapp.com/gun',
     'https://gunjs.herokuapp.com/gun'
   ]
 });
 const room = gun.get(ROOM_KEY);
 
-const pixels = new Map();
+/* Build the grid (large) */
+const pixels = new Map(); // key "x,y" -> DOM
 function keyOf(x, y) { return `${x},${y}`; }
 
 (function createGrid(){
@@ -54,6 +64,7 @@ function keyOf(x, y) { return `${x},${y}`; }
   boardEl.appendChild(frag);
 })();
 
+/* Live apply incoming updates */
 room.map().on((data, key) => {
   if (!key) return;
   const [xStr, yStr] = key.split(',');
@@ -66,10 +77,12 @@ room.map().on((data, key) => {
   el.style.background = color || PIXEL_EMPTY;
 });
 
+/* Write a pixel */
 function putPixel(x, y, colorOrNull) {
   room.get(keyOf(x,y)).put({ c: colorOrNull || null, t: Date.now() });
 }
 
+/* Paint/erase helpers */
 function handlePaint(target) {
   const x = parseInt(target.dataset.x, 10);
   const y = parseInt(target.dataset.y, 10);
@@ -82,6 +95,7 @@ function handlePaint(target) {
   }
 }
 
+/* Pointer interactions */
 boardEl.addEventListener('pointerdown', (e) => {
   const t = e.target;
   if (!t.classList.contains('pixel')) return;
@@ -102,6 +116,7 @@ boardEl.addEventListener('pointermove', (e) => {
   boardEl.addEventListener(ev, () => { isDrawing = false; })
 );
 
+/* Tools (icons only) */
 function setActiveTool(tool) {
   currentTool = tool;
   pencilBtn.classList.toggle('active', tool === 'pencil');
@@ -110,6 +125,7 @@ function setActiveTool(tool) {
 pencilBtn.addEventListener('click', () => setActiveTool('pencil'));
 eraserBtn.addEventListener('click', () => setActiveTool('eraser'));
 
+/* Color HUD */
 colorBtn.addEventListener('click', () => {
   colorModal.classList.remove('hidden');
 });
