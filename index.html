@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shared Pixel Canvas – 32×32 (No backend setup)</title>
+  <style>
+    :root {
+      --cell: 18px;        /* pixel size */
+      --gap: 1px;          /* grid gap */
+      --grid: 32;          /* grid width/height */
+      --bg: #0f1223;       /* page background */
+      --panel: #161a2f;    /* card background */
+      --border: #2a2f4a;   /* borders */
+      --text: #e9ecff;     /* text */
+      --muted: #9aa3c7;    /* muted text */
+      --accent: #7aa2ff;   /* links / accent */
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: radial-gradient(1000px 500px at 50% -200px, #1a1f3f 0, var(--bg) 60%);
+      color: var(--text); font: 16px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+      display: grid; place-items: center; padding: 24px;
+    }
+    .card {
+      width: min(92vw, 760px);
+      background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+      padding: 20px; backdrop-filter: blur(6px);
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+    }
+    h1 { font-size: 18px; margin: 0; letter-spacing: .3px; }
+    .sub { color: var(--muted); font-size: 13px; }
+    .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    .grid {
+      display: grid; grid-template-columns: repeat(var(--grid), var(--cell));
+      grid-auto-rows: var(--cell); gap: var(--gap);
+      background: #0b0e1d; padding: var(--gap);
+      border-radius: 10px; border: 1px solid var(--border);
+      user-select: none; touch-action: none;
+      width: calc(var(--grid) * var(--cell) + (var(--grid) + 1) * var(--gap));
+      margin: 10px auto;
+    }
+    .px {
+      width: var(--cell); height: var(--cell);
+      background: #121631; border-radius: 2px; transition: background-color .12s ease;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+      cursor: crosshair;
+    }
+
+    .toolbar { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+    .me {
+      display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px;
+      border: 1px solid var(--border); border-radius: 999px; background: #10142b;
+      font-size: 13px;
+    }
+    .swatch { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,.3); }
+    button, .link {
+      appearance: none; border: 1px solid var(--border); background: #10142b; color: var(--text);
+      padding: 8px 12px; border-radius: 10px; font-size: 14px; cursor: pointer;
+    }
+    button:hover, .link:hover { filter: brightness(1.1); }
+    a.link { text-decoration: none; color: var(--text); }
+    footer { margin-top: 8px; color: var(--muted); font-size: 12px; text-align: center; }
+    code { background: #0e1230; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <header>
+      <div>
+        <h1>Shared Pixel Canvas · 32×32</h1>
+        <div class="sub">No server needed. Hosted on GitHub Pages. Pixels sync via GUN p2p relays. Your color randomizes on refresh.</div>
+      </div>
+      <div class="me"><span>My color</span><div id="swatch" class="swatch"></div></div>
+    </header>
+
+    <div id="grid" class="grid" aria-label="32 by 32 pixel canvas"></div>
+
+    <div class="toolbar">
+      <div class="row">
+        <button id="randomize">New Random Color</button>
+        <button id="clear" title="Clear all pixels for everyone">Clear Canvas</button>
+      </div>
+      <a class="link" href="#" id="share">Copy Share URL</a>
+    </div>
+
+    <footer>
+      Uses <a class="link" href="https://gun.eco/" target="_blank" rel="noreferrer noopener">GUN</a> (client‑only, p2p) so it works on static hosting. Public relays are best‑effort.
+    </footer>
+  </div>
+
+  <!-- GUN: peer‑to‑peer realtime DB (client‑side) -->
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script>
+    // --- 1) GUN setup (no sign‑up). You can add more peers for reliability. ---
+    const gun = Gun({
+      peers: [
+        // Community relays (best‑effort; you can add/run your own):
+        'https://relay.peer.ooo/gun',
+      ]
+    });
+
+    // A room name so different deployments don't collide
+    const ROOM = 'lb_shared_pixel_canvas_v1';
+    const pixels = gun.get(ROOM).get('pixels');
+
+    // --- 2) App constants ---------------------------------------------------
+    const SIZE = 32; // 32x32
+    const grid = document.getElementById('grid');
+    const swatch = document.getElementById('swatch');
+    const btnRand = document.getElementById('randomize');
+    const btnClear = document.getElementById('clear');
+    const linkShare = document.getElementById('share');
+
+    // --- 3) Random color per refresh ---------------------------------------
+    const randomColor = () => {
+      const h = Math.floor(Math.random() * 360);
+      const s = 70 + Math.floor(Math.random() * 20); // 70–90%
+      const l = 50 + Math.floor(Math.random() * 10); // 50–60%
+      return hslToHex(h, s, l);
+    };
+    let myColor = randomColor();
+    const setMyColor = (c) => { myColor = c; swatch.style.background = c; };
+    setMyColor(myColor);
+    btnRand.addEventListener('click', () => setMyColor(randomColor()));
+
+    linkShare.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(location.href).then(() => {
+        linkShare.textContent = 'Copied!';
+        setTimeout(() => (linkShare.textContent = 'Copy Share URL'), 1200);
+      });
+    });
+
+    // --- 4) Build the grid --------------------------------------------------
+    const cellEl = (x, y) => {
+      const d = document.createElement('div');
+      d.className = 'px';
+      d.dataset.x = x; d.dataset.y = y;
+      d.role = 'button'; d.title = `(${x}, ${y})`;
+      d.addEventListener('pointerdown', paint);
+      return d;
+    };
+
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        grid.appendChild(cellEl(x, y));
+      }
+    }
+
+    // Quick lookup for DOM nodes
+    const idx = (x, y) => y * SIZE + x;
+    const cells = Array.from(grid.children);
+
+    // --- 5) Realtime sync with GUN -----------------------------------------
+    // Listen to every pixel key as a map, update cells as they arrive/change
+    pixels.map().on((val, key) => {
+      if (!key || !val) return; // null means deleted
+      const [xStr, yStr] = key.split('-');
+      const x = parseInt(xStr, 10), y = parseInt(yStr, 10);
+      if (Number.isNaN(x) || Number.isNaN(y)) return;
+      const cell = cells[idx(x, y)];
+      if (cell) cell.style.background = val.c;
+    });
+
+    // One-shot load: ask peers for current state (GUN eventually delivers via .on anyway)
+
+    // --- 6) Painting --------------------------------------------------------
+    let painting = false, lastKey = '';
+
+    function paint(ev) {
+      const el = ev.currentTarget; // the cell
+      const x = parseInt(el.dataset.x, 10);
+      const y = parseInt(el.dataset.y, 10);
+      const key = `${x}-${y}`;
+      if (key === lastKey) return; // avoid duplicate writes on same cell
+      lastKey = key;
+      painting = true;
+      pixels.get(key).put({ c: myColor, t: Date.now() });
+      el.style.background = myColor; // optimistic UI
+      setTimeout(() => (painting = false), 0);
+    }
+
+    // Optional: drag to paint
+    grid.addEventListener('pointerover', (e) => {
+      if (!painting || !(e.target instanceof HTMLElement)) return;
+      if (!e.target.classList.contains('px')) return;
+      const x = parseInt(e.target.dataset.x, 10);
+      const y = parseInt(e.target.dataset.y, 10);
+      const key = `${x}-${y}`;
+      if (key === lastKey) return;
+      lastKey = key;
+      pixels.get(key).put({ c: myColor, t: Date.now() });
+      e.target.style.background = myColor;
+    });
+    window.addEventListener('pointerup', () => (painting = false, lastKey = ''));
+
+    // --- 7) Clear canvas for everyone --------------------------------------
+    btnClear.addEventListener('click', async () => {
+      if (!confirm('Clear the entire canvas for everyone?')) return;
+      // Clearing a GUN map: iterate through keys and put(null)
+      pixels.map().once((_, key) => {
+        if (!key) return;
+        pixels.get(key).put(null);
+      });
+      for (const c of cells) c.style.background = '#121631';
+    });
+
+    // --- 8) Helpers ---------------------------------------------------------
+    function hslToHex(h, s, l) {
+      s /= 100; l /= 100;
+      const k = n => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
+      return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    }
+  </script>
+</body>
+</html>
